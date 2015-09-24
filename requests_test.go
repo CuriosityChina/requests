@@ -144,7 +144,6 @@ func TestConvertResponseToBytes(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	var bin httpBin
-	// var url = "http://www.baidu.com"
 	var url = "http://httpbin.org/get"
 	result, err := Get(url, nil, &bin)
 	if err != nil {
