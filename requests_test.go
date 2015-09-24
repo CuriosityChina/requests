@@ -26,11 +26,24 @@ type httpBin struct {
 	URL    string `json:"url"`
 }
 
+type httpBinXML struct {
+	Slideshow struct {
+		Title  string `xml:"title,attr"`
+		Date   string `xml:"date,attr"`
+		Author string `xml:"author,attr"`
+		Slide  []struct {
+			Type  string   `xml:"type,attr"`
+			Title string   `xml:"title"`
+			Item  []string `xml:"item"`
+		} `xml:"slide"`
+	} `xml:"slideshow"`
+}
+
 type echo struct {
 	Hello string `json:"hello"`
 }
 
-func TestParse2Struct(t *testing.T) {
+func TestParse2StructWithJSON(t *testing.T) {
 	var bin httpBin
 	testJSON := `
 	{
@@ -59,6 +72,44 @@ func TestParse2Struct(t *testing.T) {
 	if bin.JSON.Hello != "world" {
 		t.Errorf("want world, got %s", bin.JSON.Hello)
 	}
+}
+
+func TestParse2StructWithXML(t *testing.T) {
+	var binXML httpBinXML
+	testXML := `
+	<?xml version='1.0' encoding='utf-8'?>
+
+	<!--  A SAMPLE set of slides  -->
+
+	<slideshow
+    	title="Sample Slide Show"
+    	date="Date of publication"
+    	author="Yours Truly"
+    >
+
+    <!-- TITLE SLIDE -->
+    <slide type="all">
+      <title>Wake up to WonderWidgets!</title>
+    </slide>
+
+    <!-- OVERVIEW -->
+    <slide type="all">
+        <title>Overview</title>
+        <item>Why <em>WonderWidgets</em> are great</item>
+        <item/>
+        <item>Who <em>buys</em> WonderWidgets</item>
+    </slide>
+
+	</slideshow>
+	`
+	err := Parse2Struct("xml", []byte(testXML), binXML)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestParse2StructWithText(t *testing.T) {
+
 }
 
 func TestParse2Bytes(t *testing.T) {

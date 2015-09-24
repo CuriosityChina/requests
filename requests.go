@@ -50,6 +50,10 @@ func Parse2Bytes(contentType string, request interface{}) ([]byte, error) {
 }
 
 func ConvertResponseToBytes(r *http.Response) ([]byte, error) {
+	if r == nil {
+		err := errors.New("http response address nil")
+		return []byte{}, err
+	}
 	buf, err := ioutil.ReadAll(r.Body)
 	origin := loopReader{bytes.NewBuffer(buf)}
 	r.Body = origin
