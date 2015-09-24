@@ -1,0 +1,18 @@
+before_script:
+  - PROJECT_CI_PATH=$PWD
+  - REPO_PATH=git.curio.im/golibs/requests
+
+build_and_test:
+  script:
+  - env
+  - go get -u github.com/astaxie/beego/httplib
+  - go get -u github.com/facebookgo/stackerr
+  - PROJECT_GOPATH_SRC_PATH=$GOPATH/src/$REPO_PATH
+  - rm -rf $PROJECT_GOPATH_SRC_PATH
+  - mkdir -p $PROJECT_GOPATH_SRC_PATH
+  - cp -rf ./* $PROJECT_GOPATH_SRC_PATH
+  - cd $PROJECT_GOPATH_SRC_PATH
+  - go version
+  - go test -v
+  - rm -rf $PROJECT_GOPATH_SRC_PATH
+  - cd $PROJECT_CI_PATH
