@@ -73,6 +73,8 @@ func Get(url string, headers map[string]string, response interface{}) (*http.Res
 
 func httpCall(action, url string, request interface{}, headers map[string]string, response ...interface{}) (*http.Response, error) {
 	var req *httplib.BeegoHttpRequest
+	debugf("httpCall method: %s, url %s", action, url)
+	debugf("httpCall default request header: %+v", headers)
 	switch strings.ToUpper(action) {
 	case "PUT":
 		req = httplib.Put(url)
@@ -92,6 +94,8 @@ func httpCall(action, url string, request interface{}, headers map[string]string
 		}
 	}
 
+	debugf("httpCall request header: %+v", headers)
+
 	for k, v := range headers {
 		req.Header(k, v)
 	}
@@ -102,6 +106,7 @@ func httpCall(action, url string, request interface{}, headers map[string]string
 		if err != nil {
 			return nil, stackerr.Wrap(err)
 		}
+		debugf("httpCall send body: %s", string(result))
 		req.Body(result)
 	}
 
@@ -109,11 +114,12 @@ func httpCall(action, url string, request interface{}, headers map[string]string
 	if err != nil {
 		return nil, stackerr.Wrap(err)
 	}
-
+	debugf("httpCall response header %+v", resp.Header)
 	data, err := ConvertResponseToBytes(resp)
 	if err != nil {
 		return resp, stackerr.Wrap(err)
 	}
+	debugf("httpCall response body: %s", string(data))
 
 	if len(data) == 0 {
 		return resp, errors.New("LENGTH IS 0")
@@ -123,5 +129,6 @@ func httpCall(action, url string, request interface{}, headers map[string]string
 	if err != nil {
 		return resp, stackerr.Wrap(err)
 	}
+	debugf("httpCall response struct: %+v", response[0])
 	return resp, nil
 }
