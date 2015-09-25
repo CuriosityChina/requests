@@ -55,6 +55,7 @@ func ConvertResponseToBytes(r *http.Response) ([]byte, error) {
 		return []byte{}, err
 	}
 	buf, err := ioutil.ReadAll(r.Body)
+	r.Body.Close()
 	origin := loopReader{bytes.NewBuffer(buf)}
 	r.Body = origin
 	return buf, err

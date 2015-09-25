@@ -41,6 +41,7 @@ func main() {
 	var bin httpBin
 	var url = "http://httpbin.org/get"
 	result, err := requests.Get(url, nil, &bin)
+    defer result.Body.Close()
 	if err != nil {
 		log.Println(err)
 	}
