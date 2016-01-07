@@ -208,7 +208,7 @@ func TestPut(t *testing.T) {
 	}
 }
 
-func TestPostFuncs(t *testing.T) {
+func TestRequestFuncs(t *testing.T) {
 	// 设置超时时间
 	var timeout = func(req *httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest {
 		return req.SetTimeout(10*time.Second, 20*time.Second)

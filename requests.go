@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
-	"github.com/astaxie/beego/httplib"
-	"github.com/facebookgo/stackerr"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/astaxie/beego/httplib"
+	"github.com/facebookgo/stackerr"
 )
 
 type loopReader struct {
@@ -60,22 +61,22 @@ func ConvertResponseToBytes(r *http.Response) ([]byte, error) {
 	return buf, err
 }
 
-func Post(url string, request interface{}, headers map[string]string, response interface{}, postFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
-	return httpCall("POST", url, request, headers, response, postFuncs...)
+func Post(url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
+	return httpCall("POST", url, request, headers, response, requestFuncs...)
 }
 
-func Put(url string, request interface{}, headers map[string]string, response interface{}, postFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
-	return httpCall("PUT", url, request, headers, response, postFuncs...)
+func Put(url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
+	return httpCall("PUT", url, request, headers, response, requestFuncs...)
 }
 
-func Delete(url string, request interface{}, headers map[string]string, response interface{}, postFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
-	return httpCall("DELETE", url, request, headers, response, postFuncs...)
+func Delete(url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
+	return httpCall("DELETE", url, request, headers, response, requestFuncs...)
 }
-func Get(url string, headers map[string]string, response interface{}, postFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
-	return httpCall("GET", url, nil, headers, response, postFuncs...)
+func Get(url string, headers map[string]string, response interface{}, requestFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
+	return httpCall("GET", url, nil, headers, response, requestFuncs...)
 }
 
-func httpCall(action, url string, request interface{}, headers map[string]string, response interface{}, postFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
+func httpCall(action, url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
 	var req *httplib.BeegoHttpRequest
 	debugf("httpCall method: %s, url %s", action, url)
 	debugf("httpCall default request header: %+v", headers)
@@ -92,8 +93,8 @@ func httpCall(action, url string, request interface{}, headers map[string]string
 		req = httplib.Post(url)
 	}
 
-	for i := range postFuncs {
-		req = postFuncs[i](req)
+	for i := range requestFuncs {
+		req = requestFuncs[i](req)
 	}
 
 	if headers == nil || headers["Content-Type"] == "" {
