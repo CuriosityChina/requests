@@ -2,12 +2,15 @@ package requests
 
 import (
 	// "crypto/tls"
-	"github.com/astaxie/beego/httplib"
+
+	"crypto/tls"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/astaxie/beego/httplib"
 )
 
 type httpBin struct {
@@ -208,17 +211,17 @@ func TestPut(t *testing.T) {
 func TestPostFuncs(t *testing.T) {
 	// 设置超时时间
 	var timeout = func(req *httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest {
-		return req.SetTimeout(time.Microsecond*1, time.Microsecond*1)
+		return req.SetTimeout(10*time.Second, 20*time.Second)
 	}
 
-	// var inscure = func(req *httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest {
-	// 	return req.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
-	// }
+	var insecure = func(req *httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest {
+		return req.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	}
 
 	var bin httpBin
 	request := &echo{Hello: "world"}
-	var url = "http://httpbin.org/put"
-	result, err := Put(url, request, nil, &bin, timeout)
+	var url = "https://httpbin.org/put"
+	result, err := Put(url, request, nil, &bin, timeout, insecure)
 	if err != nil {
 		m, _ := ConvertResponseToBytes(result)
 		t.Log(string(m))
