@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/astaxie/beego/httplib"
+	"git.curio.im/golibs/requests/httplib"
 	"github.com/facebookgo/stackerr"
 )
 

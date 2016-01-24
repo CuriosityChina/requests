@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/astaxie/beego/httplib"
+	"git.curio.im/golibs/requests/httplib"
 )
 
 type httpBin struct {
