@@ -111,12 +111,19 @@ func httpCall(action, url string, request interface{}, headers map[string]string
 
 	// 转成struct
 	if action != "GET" {
-		result, err := Parse2Bytes(headers["Content-Type"], request)
-		if err != nil {
-			return nil, stackerr.Wrap(err)
+		switch request.(type) {
+		case string:
+			req.Body(request.(string))
+		case []byte:
+			req.Body(request.([]byte))
+		default:
+			result, err := Parse2Bytes(headers["Content-Type"], request)
+			if err != nil {
+				return nil, stackerr.Wrap(err)
+			}
+			debugf("httpCall send body: %s", string(result))
+			req.Body(result)
 		}
-		debugf("httpCall send body: %s", string(result))
-		req.Body(result)
 	}
 
 	resp, err := req.SendOut()
