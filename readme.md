@@ -6,6 +6,10 @@ Reuqests is a library for working for http request. It currently supports
   > - Support library internal debug logging
 
 
+#### **Install**
+```
+go get -u gopkg.curio.im/golibs/requests.v1
+```
 
 #### **Code Examples**
 -----
@@ -15,7 +19,7 @@ package main
 import (
 	"log"
 
-	"git.curio.im/golibs/requests"
+	"gopkg.curio.im/golibs/requests.v1"
 )
 
 type httpBin struct {
