@@ -1,16 +1,10 @@
 package requests
 
 import (
-	// "crypto/tls"
-
 	"crypto/tls"
-	"io/ioutil"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
-
-	"git.curio.im/golibs/requests/httplib"
 )
 
 type httpBin struct {
@@ -49,115 +43,15 @@ type echo struct {
 	Hello string `json:"hello"`
 }
 
-func TestParse2StructWithJSON(t *testing.T) {
-	var bin httpBin
-	testJSON := `
-	{
-		"args": {},
-		"data": "{\"hello\":\"world\"}",
-		"files": {},
-		"form": {},
-		"headers": {
-		"Accept-Encoding": "gzip",
-		"Content-Length": "17",
-		"Content-Type": "application/json; charset=utf-8",
-		"Host": "httpbin.org",
-		"User-Agent": "beegoServer"
-		},
-		"json": {
-			"hello": "world"
-		},
-		"origin": "118.244.254.30",
-		"url": "http://httpbin.org/post"
-	}
-	`
-	err := Parse2Struct("json", []byte(testJSON), &bin)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bin.JSON.Hello != "world" {
-		t.Errorf("want world, got %s", bin.JSON.Hello)
-	}
-}
-
-func TestParse2StructWithXML(t *testing.T) {
-	var binXML httpBinXML
-	testXML := `
-	<?xml version='1.0' encoding='utf-8'?>
-
-	<!--  A SAMPLE set of slides  -->
-
-	<slideshow
-    	title="Sample Slide Show"
-    	date="Date of publication"
-    	author="Yours Truly"
-    >
-
-    <!-- TITLE SLIDE -->
-    <slide type="all">
-      <title>Wake up to WonderWidgets!</title>
-    </slide>
-
-    <!-- OVERVIEW -->
-    <slide type="all">
-        <title>Overview</title>
-        <item>Why <em>WonderWidgets</em> are great</item>
-        <item/>
-        <item>Who <em>buys</em> WonderWidgets</item>
-    </slide>
-
-	</slideshow>
-	`
-	err := Parse2Struct("xml", []byte(testXML), binXML)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestParse2StructWithText(t *testing.T) {
-
-}
-
-func TestParse2Bytes(t *testing.T) {
-	var bin httpBin
-	bin.Headers.Content_Length = "application/json; charset=utf-8"
-	b, err := Parse2Bytes("json", bin)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(b), "application/json; charset=utf-8") {
-		t.Errorf("want true, got %t", strings.Contains(string(b), "application/json; charset=utf-8"))
-	}
-}
-
-func TestConvertResponseToBytes(t *testing.T) {
-	resp, err := http.Get("https://api.github.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	b1, err := ConvertResponseToBytes(resp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	b2, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(b1) != string(b2) {
-		t.Errorf("want true, got %t", string(b1) == string(b2))
-	}
-}
-
 func TestGet(t *testing.T) {
 	var bin httpBin
 	var url = "http://httpbin.org/get"
 	result, err := Get(url, nil, &bin)
 	if err != nil {
-		m, _ := ConvertResponseToBytes(result)
-		t.Log(string(m))
 		t.Fatal(err)
 	}
 	if len(strings.Split(bin.Origin, ".")) != 4 {
+		t.Logf("%#v", result)
 		t.Errorf("want 4, got %d", len(strings.Split(bin.Origin, ".")))
 	}
 }
@@ -169,11 +63,10 @@ func TestPost(t *testing.T) {
 
 	result, err := Post(url, request, nil, &bin)
 	if err != nil {
-		m, _ := ConvertResponseToBytes(result)
-		t.Log(string(m))
 		t.Fatal(err)
 	}
 	if bin.JSON.Hello != request.Hello {
+		t.Logf("%#v", result)
 		t.Errorf("want %s, got %+v", request.Hello, bin.JSON.Hello)
 	}
 }
@@ -184,11 +77,10 @@ func TestDelete(t *testing.T) {
 	var url = "http://httpbin.org/delete"
 	result, err := Delete(url, request, nil, &bin)
 	if err != nil {
-		m, _ := ConvertResponseToBytes(result)
-		t.Log(string(m))
 		t.Fatal(err)
 	}
 	if bin.JSON.Hello != request.Hello {
+		t.Logf("%#v", result)
 		t.Errorf("want %s, got %+v", request.Hello, bin.JSON.Hello)
 	}
 }
@@ -199,23 +91,22 @@ func TestPut(t *testing.T) {
 	var url = "http://httpbin.org/put"
 	result, err := Put(url, request, nil, &bin)
 	if err != nil {
-		m, _ := ConvertResponseToBytes(result)
-		t.Log(string(m))
 		t.Fatal(err)
 	}
 	if bin.JSON.Hello != request.Hello {
+		t.Logf("%#v", result)
 		t.Errorf("want %s, got %+v", request.Hello, bin.JSON.Hello)
 	}
 }
 
 func TestRequestFuncs(t *testing.T) {
 	// 设置超时时间
-	var timeout = func(req *httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest {
-		return req.SetTimeout(10*time.Second, 20*time.Second)
+	var timeout = func(clt *Config) {
+		clt.DialTimeout = 1 * time.Microsecond
 	}
 
-	var insecure = func(req *httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest {
-		return req.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	var insecure = func(clt *Config) {
+		clt.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
 	var bin httpBin
@@ -223,11 +114,10 @@ func TestRequestFuncs(t *testing.T) {
 	var url = "https://httpbin.org/put"
 	result, err := Put(url, request, nil, &bin, timeout, insecure)
 	if err != nil {
-		m, _ := ConvertResponseToBytes(result)
-		t.Log(string(m))
 		t.Fatal(err)
 	}
 	if bin.JSON.Hello != request.Hello {
+		t.Logf("%#v", result)
 		t.Errorf("want %s, got %+v", request.Hello, bin.JSON.Hello)
 	}
 }

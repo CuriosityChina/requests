@@ -1,150 +1,116 @@
 package requests
 
 import (
+	"bufio"
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"encoding/xml"
-	"errors"
-	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
-
-	"git.curio.im/golibs/requests/httplib"
-	"github.com/facebookgo/stackerr"
+	"time"
 )
 
-type loopReader struct {
-	*bytes.Buffer
+type Config struct {
+	TLSConfig           *tls.Config
+	DialTimeout         time.Duration
+	DialKeepAlive       time.Duration
+	TLSHandshakeTimeout time.Duration
+	DiableKeepAlive     bool
+	MaxIdelConnsPerHost int
 }
 
-func (r loopReader) Close() error {
-	return nil
-}
-
-func Parse2Struct(contentType string, data []byte, response interface{}) error {
-	if strings.Contains(contentType, "xml") {
-		return stackerr.Wrap(xml.Unmarshal(data, &response))
-	}
-	if strings.Contains(contentType, "text/") {
-		switch response.(type) {
-		case string:
-			response = string(data)
-		default:
-			response = &data
-		}
-		return nil
-	}
-	return stackerr.Wrap(json.Unmarshal(data, &response))
-}
-
-func Parse2Bytes(contentType string, request interface{}) ([]byte, error) {
-	if strings.Contains(contentType, "json") {
-		result, x := json.Marshal(request)
-		return result, stackerr.Wrap(x)
-	}
-	if strings.Contains(contentType, "xml") {
-		result, x := xml.Marshal(request)
-		return result, stackerr.Wrap(x)
-	}
-	return nil, stackerr.New("NOT FOUND")
-}
-
-func ConvertResponseToBytes(r *http.Response) ([]byte, error) {
-	if r == nil {
-		err := errors.New("http response address nil")
-		return []byte{}, err
-	}
-	buf, err := ioutil.ReadAll(r.Body)
-	r.Body.Close()
-	origin := loopReader{bytes.NewBuffer(buf)}
-	r.Body = origin
-	return buf, err
-}
-
-func Post(url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
-	return httpCall("POST", url, request, headers, response, requestFuncs...)
-}
-
-func Put(url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
-	return httpCall("PUT", url, request, headers, response, requestFuncs...)
-}
-
-func Delete(url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
-	return httpCall("DELETE", url, request, headers, response, requestFuncs...)
-}
-func Get(url string, headers map[string]string, response interface{}, requestFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
-	return httpCall("GET", url, nil, headers, response, requestFuncs...)
-}
-
-func httpCall(action, url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*httplib.BeegoHttpRequest) *httplib.BeegoHttpRequest) (*http.Response, error) {
-	var req *httplib.BeegoHttpRequest
-	debugf("httpCall method: %s, url %s", action, url)
-	debugf("httpCall default request header: %+v", headers)
-	switch strings.ToUpper(action) {
-	case "PUT":
-		req = httplib.Put(url)
-	case "POST":
-		req = httplib.Post(url)
-	case "DELETE":
-		req = httplib.Delete(url)
-	case "GET":
-		req = httplib.Get(url)
-	default:
-		req = httplib.Post(url)
-	}
-
-	for i := range requestFuncs {
-		req = requestFuncs[i](req)
-	}
-
-	if headers == nil || headers["Content-Type"] == "" {
+func httpCall(action, url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*Config)) (*http.Response, error) {
+	var requestType string
+	if headers == nil {
 		headers = map[string]string{
 			"Content-Type": "application/json; charset=utf-8",
 		}
 	}
+	// 默认使用json
+	if headers["Content-Type"] == "" {
+		headers["Content-Type"] = "application/json; charset=utf-8"
+	}
 
-	debugf("httpCall request header: %+v", headers)
+	debugf("httpCall default request header: %+v", headers)
 
+	requestType = headers["Content-Type"]
+	var data []byte
+	if strings.Contains(requestType, "xml") {
+		data, _ = xml.Marshal(request)
+	} else {
+		data, _ = json.Marshal(request)
+	}
+
+	debugf("httpCall method: %s, url %s", action, url)
+
+	req, err := http.NewRequest(action, url, bufio.NewReader(bytes.NewBuffer(data)))
+	if err != nil {
+		return &http.Response{}, err
+	}
 	for k, v := range headers {
-		req.Header(k, v)
+		req.Header.Add(k, v)
 	}
 
-	// 转成struct
-	if action != "GET" {
-		switch request.(type) {
-		case string:
-			req.Body(request.(string))
-		case []byte:
-			req.Body(request.([]byte))
-		default:
-			result, err := Parse2Bytes(headers["Content-Type"], request)
-			if err != nil {
-				return nil, stackerr.Wrap(err)
-			}
-			debugf("httpCall send body: %s", string(result))
-			req.Body(result)
-		}
+	var config = &Config{
+		TLSConfig:           &tls.Config{InsecureSkipVerify: true},
+		DialTimeout:         10 * time.Second,
+		DialKeepAlive:       30 * time.Second,
+		TLSHandshakeTimeout: 10 & time.Second,
+		MaxIdelConnsPerHost: 1,
+		DiableKeepAlive:     false,
 	}
 
-	resp, err := req.SendOut()
+	// 覆盖原有的方法
+	for i := 0; i < len(requestFuncs); i++ {
+		f := requestFuncs[i]
+		f(config)
+	}
+
+	clt := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: config.TLSConfig,
+			Proxy:           http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   config.DialTimeout,
+				KeepAlive: config.DialKeepAlive,
+			}).Dial,
+			TLSHandshakeTimeout: config.TLSHandshakeTimeout,
+			DisableKeepAlives:   config.DiableKeepAlive,
+			MaxIdleConnsPerHost: config.MaxIdelConnsPerHost,
+		},
+	}
+	// 发送请求
+	resp, err := clt.Do(req)
 	if err != nil {
-		return nil, stackerr.Wrap(err)
+		return resp, err
 	}
-	debugf("httpCall response header %+v", resp.Header)
-	data, err := ConvertResponseToBytes(resp)
-	if err != nil {
-		return resp, stackerr.Wrap(err)
-	}
-	debugf("httpCall response body: %s", string(data))
+	defer resp.Body.Close()
 
-	if len(data) == 0 {
-		return resp, errors.New("LENGTH IS 0")
+	// 解析结果
+	responseType := resp.Header.Get("Content-Type")
+	if strings.Contains(responseType, "json") {
+		err = json.NewDecoder(resp.Body).Decode(response)
+		return resp, err
+	} else if strings.Contains(responseType, "xml") {
+		err = xml.NewDecoder(resp.Body).Decode(response)
+		return resp, err
 	}
+	return resp, err
+}
 
-	err = Parse2Struct(resp.Header.Get("Content-Type"), data, response)
-	if err != nil {
-		return resp, stackerr.Wrap(err)
-	}
-	debugf("httpCall response struct: %+v", response)
-	return resp, nil
+func Post(url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*Config)) (*http.Response, error) {
+	return httpCall("POST", url, request, headers, response, requestFuncs...)
+}
+
+func Put(url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*Config)) (*http.Response, error) {
+	return httpCall("PUT", url, request, headers, response, requestFuncs...)
+}
+
+func Delete(url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*Config)) (*http.Response, error) {
+	return httpCall("DELETE", url, request, headers, response, requestFuncs...)
+}
+func Get(url string, headers map[string]string, response interface{}, requestFuncs ...func(*Config)) (*http.Response, error) {
+	return httpCall("GET", url, nil, headers, response, requestFuncs...)
 }
