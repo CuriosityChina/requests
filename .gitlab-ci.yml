@@ -5,8 +5,6 @@ before_script:
 build_and_test:
   script:
   - env
-  - go get -u github.com/astaxie/beego/httplib
-  - go get -u github.com/facebookgo/stackerr
   - PROJECT_GOPATH_SRC_PATH=$GOPATH/src/$REPO_PATH
   - rm -rf $PROJECT_GOPATH_SRC_PATH
   - mkdir -p $PROJECT_GOPATH_SRC_PATH
