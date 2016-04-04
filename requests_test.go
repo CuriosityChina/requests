@@ -46,12 +46,11 @@ type echo struct {
 func TestGet(t *testing.T) {
 	var bin httpBin
 	var url = "http://httpbin.org/get"
-	result, err := Get(url, nil, &bin)
+	_, err := Get(url, nil, &bin)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(strings.Split(bin.Origin, ".")) != 4 {
-		t.Logf("%#v", result)
 		t.Errorf("want 4, got %d", len(strings.Split(bin.Origin, ".")))
 	}
 }
@@ -61,12 +60,11 @@ func TestPost(t *testing.T) {
 	request := &echo{Hello: "world"}
 	var url = "http://httpbin.org/post"
 
-	result, err := Post(url, request, nil, &bin)
+	_, err := Post(url, request, nil, &bin)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if bin.JSON.Hello != request.Hello {
-		t.Logf("%#v", result)
 		t.Errorf("want %s, got %+v", request.Hello, bin.JSON.Hello)
 	}
 }
@@ -75,12 +73,11 @@ func TestDelete(t *testing.T) {
 	var bin httpBin
 	request := &echo{Hello: "world"}
 	var url = "http://httpbin.org/delete"
-	result, err := Delete(url, request, nil, &bin)
+	_, err := Delete(url, request, nil, &bin)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if bin.JSON.Hello != request.Hello {
-		t.Logf("%#v", result)
 		t.Errorf("want %s, got %+v", request.Hello, bin.JSON.Hello)
 	}
 }
@@ -89,12 +86,11 @@ func TestPut(t *testing.T) {
 	var bin httpBin
 	request := &echo{Hello: "world"}
 	var url = "http://httpbin.org/put"
-	result, err := Put(url, request, nil, &bin)
+	_, err := Put(url, request, nil, &bin)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if bin.JSON.Hello != request.Hello {
-		t.Logf("%#v", result)
 		t.Errorf("want %s, got %+v", request.Hello, bin.JSON.Hello)
 	}
 }
@@ -102,7 +98,7 @@ func TestPut(t *testing.T) {
 func TestRequestFuncs(t *testing.T) {
 	// 设置超时时间
 	var timeout = func(clt *Config) {
-		clt.DialTimeout = 1 * time.Microsecond
+		clt.DialTimeout = 10 * time.Second
 	}
 
 	var insecure = func(clt *Config) {
@@ -112,12 +108,27 @@ func TestRequestFuncs(t *testing.T) {
 	var bin httpBin
 	request := &echo{Hello: "world"}
 	var url = "https://httpbin.org/put"
-	result, err := Put(url, request, nil, &bin, timeout, insecure)
+	_, err := Put(url, request, nil, &bin, timeout, insecure)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if bin.JSON.Hello != request.Hello {
-		t.Logf("%#v", result)
 		t.Errorf("want %s, got %+v", request.Hello, bin.JSON.Hello)
 	}
+}
+
+func BenchmarkRequestGetParallel(b *testing.B) {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			var bin httpBin
+			var url = "http://httpbin.org/get"
+			_, err := Get(url, nil, &bin)
+			if err != nil {
+				b.Fatal(err)
+			}
+			if len(strings.Split(bin.Origin, ".")) != 4 {
+				b.Errorf("want 4, got %d", len(strings.Split(bin.Origin, ".")))
+			}
+		}
+	})
 }
