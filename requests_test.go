@@ -122,11 +122,8 @@ func TestRequestFuncs2(t *testing.T) {
 	request := &echo{Hello: "world"}
 	var url = "https://httpbin.org/put"
 	_, err := Put(url, request, nil, &bin, WithDialTimout(10*time.Millisecond), WithSkipInsecureTLS())
-	if err != nil {
+	if err == nil {
 		t.Fatal(err)
-	}
-	if bin.JSON.Hello != request.Hello {
-		t.Errorf("want %s, got %+v", request.Hello, bin.JSON.Hello)
 	}
 }
 
