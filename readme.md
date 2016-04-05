@@ -6,7 +6,6 @@ Reuqests is a library for working for http request. It currently supports
   > - Support library internal debug logging
 
 
-
 #### **Code Examples**
 -----
 ``` go
@@ -14,7 +13,6 @@ package main
 
 import (
 	"log"
-
 	"github.com/CuriosityChina/requests"
 )
 
