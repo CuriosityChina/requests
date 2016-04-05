@@ -117,6 +117,16 @@ func TestRequestFuncs(t *testing.T) {
 	}
 }
 
+func TestRequestFuncs2(t *testing.T) {
+	var bin httpBin
+	request := &echo{Hello: "world"}
+	var url = "https://httpbin.org/put"
+	_, err := Put(url, request, nil, &bin, WithDialTimout(10*time.Millisecond), WithSkipInsecureTLS())
+	if err == nil {
+		t.Fatal(err)
+	}
+}
+
 func BenchmarkRequestGetParallel(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
