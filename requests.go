@@ -21,6 +21,30 @@ type Config struct {
 	MaxIdelConnsPerHost int
 }
 
+func WithDisableKeepAlive(keepAlive bool) func(*Config) {
+	return func(c *Config) {
+		c.DiableKeepAlive = keepAlive
+	}
+}
+
+func WithDialKeepAlive(dialKeepAlive time.Duration) func(*Config) {
+	return func(c *Config) {
+		c.DialKeepAlive = dialKeepAlive
+	}
+}
+
+func WithDialTimout(dialTimeout time.Duration) func(*Config) {
+	return func(c *Config) {
+		c.DialTimeout = dialTimeout
+	}
+}
+
+func WithSkipInsecureTLS() func(*Config) {
+	return func(c *Config) {
+		c.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+}
+
 func httpCall(action, url string, request interface{}, headers map[string]string, response interface{}, requestFuncs ...func(*Config)) (*http.Response, error) {
 	var requestType string
 	if headers == nil {
@@ -54,7 +78,7 @@ func httpCall(action, url string, request interface{}, headers map[string]string
 	}
 
 	var config = &Config{
-		TLSConfig:           &tls.Config{InsecureSkipVerify: true},
+		TLSConfig:           &tls.Config{InsecureSkipVerify: false},
 		DialTimeout:         10 * time.Second,
 		DialKeepAlive:       30 * time.Second,
 		TLSHandshakeTimeout: 10 & time.Second,
